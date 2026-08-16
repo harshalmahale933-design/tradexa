@@ -1,8 +1,0 @@
-fastapi
-uvicorn[standard]
-pydantic[email]
-pyjwt
-python-dotenv
-sqlalchemy
-psycopg2-binary
-requests
