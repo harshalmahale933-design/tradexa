@@ -4,3 +4,29 @@
   padding: 0;
   text-align: left;
 }
+
+body {
+  background-color: #06070a;
+}
+
+.glass-hover {
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.glass-hover:hover {
+  transform: translateY(-2px);
+  border-color: rgba(0, 229, 160, 0.35) !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.9; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

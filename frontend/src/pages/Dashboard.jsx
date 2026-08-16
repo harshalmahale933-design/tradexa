@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { API_BASE_URL } from "../api";
 import Sidebar from "../components/Sidebar";
+import Scene3DBackground from "../components/Scene3DBackground";
 import { theme } from "../theme";
 
 function Dashboard({ user, onLogout, onNavigate }) {
@@ -83,14 +84,17 @@ function Dashboard({ user, onLogout, onNavigate }) {
       />
 
       <div style={styles.main}>
-        {/* HEADER */}
-        <div style={styles.header}>
-          <div>
-            <h1 style={styles.pageTitle}>Dashboard</h1>
+        {/* HERO / HEADER with ambient 3D backdrop */}
+        <div style={styles.heroWrap}>
+          <Scene3DBackground intensity="light" />
+          <div style={styles.header}>
+            <div>
+              <h1 style={styles.pageTitle}>Dashboard</h1>
 
-            <p style={styles.pageSubtitle}>
-              Welcome back, {firstName}
-            </p>
+              <p style={styles.pageSubtitle}>
+                Welcome back, {firstName}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -246,7 +250,7 @@ function StatCard({
   accent,
 }) {
   return (
-    <div style={styles.statCard}>
+    <div className="glass-hover" style={styles.statCard}>
       <div
         style={{
           ...styles.statAccent,
@@ -287,6 +291,7 @@ function ActionCard({
 }) {
   return (
     <div
+      className="glass-hover"
       style={styles.actionCard}
       onClick={onClick}
     >
@@ -318,34 +323,47 @@ const styles = {
 
   main: {
     flex: 1,
-    padding: "32px 40px",
+    padding: "0 40px 32px",
     maxWidth: "1200px",
+    position: "relative",
+  },
+
+  heroWrap: {
+    position: "relative",
+    overflow: "hidden",
+    margin: "0 -40px 28px",
+    padding: "40px 40px 32px",
+    borderBottom: `1px solid ${theme.colors.border}`,
   },
 
   header: {
-    marginBottom: "28px",
+    position: "relative",
+    zIndex: 2,
   },
 
   pageTitle: {
     color: theme.colors.text,
-    fontSize: "22px",
-    fontWeight: 700,
-    letterSpacing: "-0.02em",
+    fontFamily: theme.font.display,
+    fontSize: "26px",
+    fontWeight: 600,
+    letterSpacing: "-0.01em",
     margin: 0,
   },
 
   pageSubtitle: {
     color: theme.colors.textMuted,
+    fontFamily: theme.font.family,
     fontSize: "13.5px",
-    marginTop: "4px",
+    marginTop: "6px",
   },
 
   sectionLabel: {
     color: theme.colors.textMuted,
-    fontSize: "12px",
+    fontFamily: theme.font.mono,
+    fontSize: "11.5px",
     fontWeight: 600,
     textTransform: "uppercase",
-    letterSpacing: "0.06em",
+    letterSpacing: "0.08em",
     margin: "32px 0 14px 0",
   },
 
@@ -357,12 +375,15 @@ const styles = {
   },
 
   statCard: {
-    backgroundColor: theme.colors.bgCard,
+    background: theme.glass.background,
+    backdropFilter: theme.glass.backdropFilter,
+    WebkitBackdropFilter: theme.glass.backdropFilter,
     border: `1px solid ${theme.colors.border}`,
     borderRadius: theme.radius.md,
     padding: "18px 20px",
     position: "relative",
     overflow: "hidden",
+    transition: "transform 0.15s, border-color 0.15s",
   },
 
   statAccent: {
@@ -375,6 +396,7 @@ const styles = {
 
   statLabel: {
     color: theme.colors.textMuted,
+    fontFamily: theme.font.family,
     fontSize: "12.5px",
     fontWeight: 500,
     marginBottom: "8px",
@@ -382,12 +404,14 @@ const styles = {
 
   statValue: {
     color: theme.colors.text,
-    fontSize: "24px",
-    fontWeight: 700,
-    letterSpacing: "-0.02em",
+    fontFamily: theme.font.mono,
+    fontSize: "23px",
+    fontWeight: 600,
+    letterSpacing: "-0.01em",
   },
 
   statSub: {
+    fontFamily: theme.font.mono,
     fontSize: "12px",
     fontWeight: 600,
     marginTop: "4px",
@@ -401,18 +425,21 @@ const styles = {
   },
 
   actionCard: {
-    backgroundColor: theme.colors.bgCard,
+    background: theme.glass.background,
+    backdropFilter: theme.glass.backdropFilter,
+    WebkitBackdropFilter: theme.glass.backdropFilter,
     border: `1px solid ${theme.colors.border}`,
     borderRadius: theme.radius.md,
     padding: "20px",
     cursor: "pointer",
     position: "relative",
     transition:
-      "border-color 0.15s, background-color 0.15s",
+      "border-color 0.15s, transform 0.15s, box-shadow 0.15s",
   },
 
   actionTitle: {
     color: theme.colors.text,
+    fontFamily: theme.font.family,
     fontSize: "14.5px",
     fontWeight: 600,
     marginBottom: "6px",
@@ -420,6 +447,7 @@ const styles = {
 
   actionDesc: {
     color: theme.colors.textMuted,
+    fontFamily: theme.font.family,
     fontSize: "12.5px",
     lineHeight: 1.4,
   },
@@ -428,7 +456,7 @@ const styles = {
     position: "absolute",
     top: "20px",
     right: "20px",
-    color: theme.colors.primary,
+    color: theme.colors.mint,
     fontSize: "16px",
   },
 
@@ -448,23 +476,25 @@ const styles = {
   },
 
   errorBox: {
-    backgroundColor: "#35151a",
-    border: "1px solid #6b252d",
-    borderRadius: "10px",
+    backgroundColor: theme.colors.redDim,
+    border: "1px solid rgba(255,77,106,0.35)",
+    borderRadius: theme.radius.sm,
     padding: "16px",
     marginBottom: "20px",
-    color: "#ff8b94",
+    color: theme.colors.red,
+    fontFamily: theme.font.family,
   },
 
   retryButton: {
     marginTop: "10px",
     padding: "8px 16px",
     border: "none",
-    borderRadius: "6px",
-    backgroundColor: theme.colors.primary,
-    color: "#fff",
+    borderRadius: theme.radius.sm,
+    background: `linear-gradient(135deg, ${theme.colors.mint}, ${theme.colors.mintDeep})`,
+    color: "#04140d",
     cursor: "pointer",
-    fontWeight: 600,
+    fontWeight: 700,
+    fontFamily: theme.font.family,
   },
 };
 
