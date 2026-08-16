@@ -18,9 +18,100 @@ body {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
 }
 
+.tilt-card {
+  transition: transform 0.12s ease-out, border-color 0.2s ease, box-shadow 0.2s ease;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.stagger-in {
+  opacity: 0;
+  animation: fadeSlideUp 0.5s cubic-bezier(.2,.8,.2,1) forwards;
+}
+.stagger-in:nth-child(1) { animation-delay: 0.02s; }
+.stagger-in:nth-child(2) { animation-delay: 0.08s; }
+.stagger-in:nth-child(3) { animation-delay: 0.14s; }
+.stagger-in:nth-child(4) { animation-delay: 0.20s; }
+.stagger-in:nth-child(5) { animation-delay: 0.26s; }
+.stagger-in:nth-child(6) { animation-delay: 0.32s; }
+
+@keyframes floatGlow {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(30px, -20px); }
+}
+.glow-blob {
+  animation: floatGlow 12s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+.live-dot {
+  animation: livePulse 1.8s ease-in-out infinite;
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 0.5; }
   50% { opacity: 0.9; }
+}
+
+/* ===== Score gauge (Market Intelligence) ===== */
+@keyframes gaugeSheen {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+.gauge-sheen {
+  position: absolute;
+  top: 6%;
+  left: 12%;
+  width: 55%;
+  height: 30%;
+  background: linear-gradient(120deg, rgba(255,255,255,0.10), rgba(255,255,255,0) 70%);
+  border-radius: 50%;
+  filter: blur(2px);
+  transform: rotate(-15deg);
+  animation: gaugeSheen 6s ease-in-out infinite;
+}
+
+@keyframes needleSway {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(2deg); }
+}
+.gauge-needle {
+  position: relative;
+  animation: needleSway 5s ease-in-out infinite;
+}
+
+@keyframes gaugeOrbit {
+  from { transform: rotate(0deg) translateX(150px) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(150px) rotate(-360deg); }
+}
+.gauge-particle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: #00e5a0;
+  box-shadow: 0 0 8px 2px rgba(0,229,160,0.8);
+  animation: gaugeOrbit 9s linear infinite;
+}
+.gauge-particle-2 {
+  background: #f5a623;
+  box-shadow: 0 0 8px 2px rgba(245,166,35,0.8);
+  animation-duration: 13s;
+  animation-direction: reverse;
+}
+.gauge-particle-3 {
+  opacity: 0.65;
+  animation-duration: 16s;
 }
 
 @media (prefers-reduced-motion: reduce) {

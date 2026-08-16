@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { API_BASE_URL } from "../api";
 import Sidebar from "../components/Sidebar";
+import ConstellationBackground from "../components/ConstellationBackground";
+import ScoreGauge from "../components/ScoreGauge";
 import { theme } from "../theme";
-
-
 
 function MarketIntelligence({ user, onLogout, onNavigate }) {
   const [topScores, setTopScores] = useState([]);
@@ -16,7 +16,7 @@ function MarketIntelligence({ user, onLogout, onNavigate }) {
   const [loadingTop, setLoadingTop] = useState(true);
   const [loadingIntel, setLoadingIntel] = useState(false);
   const [error, setError] = useState("");
-  
+
   // =========================================================
   // LOAD TOP SCORER
   // =========================================================
@@ -84,8 +84,6 @@ function MarketIntelligence({ user, onLogout, onNavigate }) {
 
       setIntelligence(data);
 
-      // Store the intelligence so the Top Scorer
-      // table can display 1D / 4H / News / Fundamental data.
       setAssetData((prev) => ({
         ...prev,
         [asset]: data,
@@ -108,7 +106,7 @@ function MarketIntelligence({ user, onLogout, onNavigate }) {
   }, []);
 
   // =========================================================
-  // LOAD INTELLIGENCE DATA FOR TOP SCORER ROWS
+  // LOAD INTELLIGENCE DATA FOR TOP SCORER CARDS
   // =========================================================
 
   useEffect(() => {
@@ -158,7 +156,7 @@ function MarketIntelligence({ user, onLogout, onNavigate }) {
   }, [topScores]);
 
   // =========================================================
-  // FILTER TABLE
+  // FILTER
   // =========================================================
 
   const filteredScores = useMemo(() => {
@@ -168,264 +166,295 @@ function MarketIntelligence({ user, onLogout, onNavigate }) {
         asset.asset?.toLowerCase().includes(search.toLowerCase()) ||
         asset.symbol?.toLowerCase().includes(search.toLowerCase());
 
-      const matchesBias =
-        biasFilter === "All" ||
-        getBias(asset) === biasFilter;
+      const matchesBias = biasFilter === "All" || getBias(asset) === biasFilter;
 
       return matchesSearch && matchesBias;
     });
   }, [topScores, search, biasFilter]);
 
+  const selectedTopRow = topScores.find((a) => a.asset === selectedAsset);
+
   return (
     <div style={styles.layout}>
-      <Sidebar
-        activePage="market"
-        onNavigate={onNavigate}
-        user={user}
-        onLogout={onLogout}
-      />
+      <Sidebar activePage="market" onNavigate={onNavigate} user={user} onLogout={onLogout} />
 
-      <main style={styles.main}>
-        {/* =====================================================
-            PAGE HEADER
-        ====================================================== */}
-
-        <div style={styles.breadcrumb}>
-          <strong>Tradexa</strong>
-          <span>/</span>
-          <span>Market Intelligence</span>
+      <div style={styles.main}>
+        {/* AMBIENT CONSTELLATION BACKGROUND — page-wide, viewport anchored */}
+        <div style={styles.bgLayer}>
+          <ConstellationBackground density="light" />
         </div>
+        <div className="glow-blob" style={styles.pageGlowMint} />
+        <div className="glow-blob" style={{ ...styles.pageGlowRed, animationDelay: "-6s" }} />
 
-        <div style={styles.header}>
-          <div>
-            <h1 style={styles.pageTitle}>Market Intelligence</h1>
+        <div style={styles.content}>
+          {/* ===================================================
+              HEADER
+          =================================================== */}
 
-            <p style={styles.pageSubtitle}>
-              Multi-factor market scoring across technical,
-              fundamental, sentiment and multi-timeframe data.
-            </p>
+          <div style={styles.breadcrumb}>
+            <strong>Tradexa</strong>
+            <span>/</span>
+            <span>Market Intelligence</span>
           </div>
 
-          <div style={styles.liveBadge}>
-            <span style={styles.liveDot}></span>
-            LIVE MARKET DATA
-          </div>
-        </div>
-
-        {/* =====================================================
-            SEARCH / FILTER
-        ====================================================== */}
-
-        <div style={styles.filterRow}>
-          <div style={styles.searchBox}>
-            <span style={styles.searchIcon}>⌕</span>
-
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search symbol..."
-              style={styles.searchInput}
-            />
-          </div>
-
-          <select
-            value={biasFilter}
-            onChange={(e) => setBiasFilter(e.target.value)}
-            style={styles.filterSelect}
-          >
-            <option value="All">Bias: All</option>
-            <option value="Bullish">Bullish</option>
-            <option value="Neutral">Neutral</option>
-            <option value="Bearish">Bearish</option>
-          </select>
-        </div>
-
-        {error && (
-          <div style={styles.errorBox}>
-            {error}
-          </div>
-        )}
-
-        {/* =====================================================
-            TOP SCORER
-        ====================================================== */}
-
-        <section style={styles.card}>
-          <div style={styles.cardHeader}>
+          <div style={styles.header}>
             <div>
-              <h2 style={styles.cardTitle}>Top Scorer</h2>
-
-              <p style={styles.cardSubtitle}>
-                Ranked market opportunities based on Tradexa
-                Intelligence scoring.
+              <h1 style={styles.pageTitle}>Market Intelligence</h1>
+              <p style={styles.pageSubtitle}>
+                Multi-factor market scoring across technical, fundamental, sentiment and
+                multi-timeframe data.
               </p>
             </div>
 
+            <div style={styles.liveBadge}>
+              <span className="live-dot" style={styles.liveDot} />
+              LIVE MARKET DATA
+            </div>
+          </div>
+
+          {error && <div style={styles.errorBox}>{error}</div>}
+
+          {/* ===================================================
+              FILTERS
+          =================================================== */}
+
+          <div style={styles.filterRow}>
+            <div style={styles.searchBox}>
+              <span style={styles.searchIcon}>⌕</span>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search symbol..."
+                style={styles.searchInput}
+              />
+            </div>
+
+            <div style={styles.pillRow}>
+              {["All", "Bullish", "Neutral", "Bearish"].map((b) => (
+                <button
+                  key={b}
+                  onClick={() => setBiasFilter(b)}
+                  style={{
+                    ...styles.pillButton,
+                    ...(biasFilter === b ? styles.pillButtonActive(b) : {}),
+                  }}
+                >
+                  {b}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ===================================================
+              FEATURED ASSET — hero gauge panel
+          =================================================== */}
+
+          <section className="glass-hover" style={styles.heroPanel}>
+            <div style={styles.heroLeft}>
+              <ScoreGauge
+                score={intelligence?.overall_score ?? 0}
+                max={intelligence?.overall_max ?? 15}
+                size={230}
+              />
+            </div>
+
+            <div style={styles.heroRight}>
+              <div style={styles.heroTopRow}>
+                <div>
+                  <div style={styles.heroAssetName}>{selectedAsset}</div>
+                  <div style={styles.heroPrice}>
+                    {selectedTopRow?.current_price ?? intelligence?.daily_analysis?.current_price ?? "—"}
+                  </div>
+                </div>
+
+                <div style={styles.analyzeRow}>
+                  <select
+                    value={selectedAsset}
+                    onChange={(e) => loadIntelligence(e.target.value)}
+                    style={styles.assetSelect}
+                  >
+                    {topScores.length > 0 ? (
+                      topScores.map((asset) => (
+                        <option key={asset.asset} value={asset.asset}>
+                          {asset.asset}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="Gold">Gold</option>
+                    )}
+                  </select>
+
+                  <button
+                    onClick={() => loadIntelligence(selectedAsset)}
+                    style={styles.analyzeButton}
+                  >
+                    {loadingIntel ? "Loading..." : "Analyze"}
+                  </button>
+                </div>
+              </div>
+
+              {loadingIntel ? (
+                <div style={styles.heroLoading}>
+                  Fetching live intelligence for <strong>{selectedAsset}</strong>...
+                </div>
+              ) : intelligence ? (
+                <>
+                  <span
+                    style={{
+                      ...styles.biasBadgeLg,
+                      color: getBiasColorFromText(intelligence.technical?.trend),
+                      backgroundColor: getBiasBackground(
+                        normalizeBias(intelligence.technical?.trend)
+                      ),
+                    }}
+                  >
+                    ● {normalizeBias(intelligence.technical?.trend)} Bias
+                  </span>
+
+                  <div style={styles.subRingRow}>
+                    <RingMeter
+                      value={intelligence.technical?.score}
+                      max={intelligence.technical?.max ?? 5}
+                      color={theme.colors.mint}
+                      label="Technical"
+                    />
+                    <RingMeter
+                      value={intelligence.fundamental?.score}
+                      max={intelligence.fundamental?.max ?? 5}
+                      color={theme.colors.amber}
+                      label="Fundamental"
+                    />
+                    <RingMeter
+                      value={intelligence.sentiment?.score}
+                      max={intelligence.sentiment?.max ?? 5}
+                      color={theme.colors.mint}
+                      label="Sentiment"
+                    />
+                  </div>
+                </>
+              ) : (
+                <div style={styles.heroLoading}>Select an asset to view intelligence.</div>
+              )}
+            </div>
+          </section>
+
+          {/* ===================================================
+              TOP SCORER — card grid
+          =================================================== */}
+
+          <div style={styles.sectionHeaderRow}>
+            <div>
+              <h2 style={styles.sectionTitle}>Top Scorer</h2>
+              <p style={styles.sectionSubtitle}>
+                Ranked market opportunities based on Tradexa Intelligence scoring.
+              </p>
+            </div>
             <div style={styles.engineStatus}>
-              <span style={styles.statusDot}></span>
+              <span style={styles.statusDot} />
               Market engine online
             </div>
           </div>
 
           {loadingTop ? (
-            <div style={styles.loading}>
-              Loading market data...
-            </div>
+            <div style={styles.loading}>Loading market data...</div>
           ) : filteredScores.length === 0 ? (
-            <div style={styles.loading}>
-              No market data available.
-            </div>
+            <div style={styles.loading}>No market data available.</div>
           ) : (
-            <div style={styles.tableScroll}>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}>SYMBOL</th>
-                    <th style={styles.th}>ASSET</th>
-                    <th style={styles.th}>BIAS</th>
-                    <th style={styles.th}>SCORE</th>
-                    <th style={styles.th}>PRICE</th>
-                    <th style={styles.th}>1 DAY</th>
-                    <th style={styles.th}>4 HOUR</th>
-                    <th style={styles.th}>NEWS / SENTIMENT</th>
-                    <th style={styles.th}>FUNDAMENTAL</th>
-                    <th style={styles.th}></th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {filteredScores.map((asset, index) => {
-                    const data = assetData[asset.asset];
-
-                    return (
-                      <MarketRow
-                        key={`${asset.asset}-${index}`}
-                        asset={asset}
-                        data={data}
-                        selected={selectedAsset === asset.asset}
-                        onClick={() =>
-                          loadIntelligence(asset.asset)
-                        }
-                      />
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div style={styles.cardGrid}>
+              {filteredScores.map((asset, index) => (
+                <AssetCard
+                  key={`${asset.asset}-${index}`}
+                  asset={asset}
+                  data={assetData[asset.asset]}
+                  selected={selectedAsset === asset.asset}
+                  onClick={() => loadIntelligence(asset.asset)}
+                />
+              ))}
             </div>
           )}
-        </section>
 
-        {/* =====================================================
-            ASSET INTELLIGENCE
-        ====================================================== */}
+          {/* ===================================================
+              ASSET INTELLIGENCE BREAKDOWN
+          =================================================== */}
 
-        <section style={styles.assetPanel}>
-          <div style={styles.assetPanelHeader}>
+          <div style={styles.sectionHeaderRow}>
             <div>
-              <h2 style={styles.cardTitle}>
-                Asset Intelligence
-              </h2>
-
-              <p style={styles.cardSubtitle}>
-                Detailed analysis for the selected asset.
-              </p>
-            </div>
-
-            <div style={styles.analyzeRow}>
-              <select
-                value={selectedAsset}
-                onChange={(e) => loadIntelligence(e.target.value)}
-                style={styles.assetSelect}
-              >
-                {topScores.length > 0 ? (
-                  topScores.map((asset) => (
-                    <option
-                      key={asset.asset}
-                      value={asset.asset}
-                    >
-                      {asset.asset}
-                    </option>
-                  ))
-                ) : (
-                  <option value="Gold">Gold</option>
-                )}
-              </select>
-
-              <button
-                onClick={() => loadIntelligence(selectedAsset)}
-                style={styles.analyzeButton}
-              >
-                {loadingIntel ? "Loading..." : "Analyze"}
-              </button>
+              <h2 style={styles.sectionTitle}>Asset Intelligence</h2>
+              <p style={styles.sectionSubtitle}>Detailed breakdown for {selectedAsset}.</p>
             </div>
           </div>
 
-          {loadingIntel ? (
-            <div style={styles.loadingPanel}>
-              Fetching live intelligence for{" "}
-              <strong>{selectedAsset}</strong>...
-            </div>
-          ) : intelligence ? (
-            <IntelligenceDashboard data={intelligence} />
-          ) : (
-            <div style={styles.loadingPanel}>
-              Select an asset to view intelligence.
+          {intelligence && !loadingIntel && (
+            <div style={styles.intelligenceGrid}>
+              <TechnicalCard technical={intelligence.technical} />
+              <FundamentalCard fundamental={intelligence.fundamental} />
+              <SentimentCard sentiment={intelligence.sentiment} />
+              <MultiTimeframeCard technical={intelligence.technical} />
             </div>
           )}
-        </section>
-      </main>
+        </div>
+      </div>
     </div>
   );
 }
 
 // ============================================================
-// MARKET ROW
+// RING METER (small circular sub-score)
 // ============================================================
 
-function MarketRow({
-  asset,
-  data,
-  selected,
-  onClick,
-}) {
+function RingMeter({ value, max = 5, color, label }) {
+  const v = Number(value ?? 0);
+  const pct = max > 0 ? Math.max(0, Math.min(1, v / max)) : 0;
+  const circumference = 2 * Math.PI * 26;
+  const offset = circumference * (1 - pct);
+
+  return (
+    <div style={styles.ringWrap}>
+      <div style={{ position: "relative", width: 64, height: 64 }}>
+        <svg viewBox="0 0 64 64" style={{ transform: "rotate(-90deg)" }}>
+          <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="6" />
+          <circle
+            cx="32"
+            cy="32"
+            r="26"
+            fill="none"
+            stroke={color}
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            style={{ filter: `drop-shadow(0 0 4px ${color}88)`, transition: "stroke-dashoffset 1s ease" }}
+          />
+        </svg>
+        <div style={styles.ringLabel}>{value != null ? value : "—"}</div>
+      </div>
+      <div style={styles.ringCaption}>{label}</div>
+    </div>
+  );
+}
+
+// ============================================================
+// ASSET CARD (Top Scorer grid item)
+// ============================================================
+
+function AssetCard({ asset, data, selected, onClick }) {
   const bias = getBias(asset);
   const biasColor = getBiasColor(bias);
 
-  const technical = data?.technical;
-  const fundamental = data?.fundamental;
-  const sentiment = data?.sentiment;
-
-  const daily = technical?.daily;
-  const h4 = technical?.h4;
-
   return (
-    <tr
-      style={{
-        ...styles.tr,
-        ...(selected ? styles.selectedRow : {}),
-      }}
+    <div
+      className="stagger-in glass-hover tilt-card"
       onClick={onClick}
+      style={{
+        ...styles.assetCard,
+        ...(selected ? styles.assetCardSelected : {}),
+      }}
     >
-      {/* SYMBOL */}
-      <td style={styles.td}>
-        <div style={styles.symbol}>
-          {asset.symbol || getSymbol(asset.asset)}
+      <div style={styles.assetCardTop}>
+        <div>
+          <div style={styles.assetCardSymbol}>{asset.symbol || getSymbol(asset.asset)}</div>
+          <div style={styles.assetCardCategory}>{getCategory(asset.asset)}</div>
         </div>
-
-        <div style={styles.category}>
-          {getCategory(asset.asset)}
-        </div>
-      </td>
-
-      {/* ASSET */}
-      <td style={styles.td}>
-        <strong style={styles.assetText}>
-          {asset.asset}
-        </strong>
-      </td>
-
-      {/* BIAS */}
-      <td style={styles.td}>
         <span
           style={{
             ...styles.biasBadge,
@@ -435,194 +464,40 @@ function MarketRow({
         >
           {bias}
         </span>
-      </td>
+      </div>
 
-      {/* SCORE */}
-      <td style={styles.td}>
-        <span
-          style={{
-            ...styles.scoreBadge,
-            color:
-              Number(asset.score) >= 0
-                ? theme.colors.green
-                : theme.colors.red,
-            backgroundColor:
-              Number(asset.score) >= 0
-                ? theme.colors.greenMuted
-                : theme.colors.redMuted,
-          }}
-        >
-          {formatScore(asset.score)}
-        </span>
-      </td>
+      <div style={styles.assetCardBody}>
+        <ScoreGauge score={asset.score ?? 0} max={asset.max_score ?? 15} size={92} compact />
 
-      {/* PRICE */}
-      <td style={styles.td}>
-        <span style={styles.price}>
-          {asset.current_price ??
-            daily?.current_price ??
-            "—"}
-        </span>
-      </td>
+        <div style={styles.assetCardStats}>
+          <div style={styles.assetCardName}>{asset.asset}</div>
+          <div style={styles.assetCardPrice}>{asset.current_price ?? "—"}</div>
 
-      {/* 1 DAY */}
-      <td style={styles.td}>
-        <TimeframeCell
-          timeframe="1D"
-          value={daily}
-        />
-      </td>
-
-      {/* 4 HOUR */}
-      <td style={styles.td}>
-        <TimeframeCell
-          timeframe="4H"
-          value={h4}
-        />
-      </td>
-
-      {/* NEWS / SENTIMENT */}
-      <td style={styles.td}>
-        <SentimentCell sentiment={sentiment} />
-      </td>
-
-      {/* FUNDAMENTAL */}
-      <td style={styles.td}>
-        <FundamentalCell fundamental={fundamental} />
-      </td>
-
-      {/* ARROW */}
-      <td style={styles.td}>
-        <span style={styles.arrow}>›</span>
-      </td>
-    </tr>
+          <MiniTrendLine label="1D" value={data?.technical?.daily} />
+          <MiniTrendLine label="4H" value={data?.technical?.h4} />
+        </div>
+      </div>
+    </div>
   );
 }
 
-// ============================================================
-// TIMEFRAME CELL
-// ============================================================
-
-function TimeframeCell({ value }) {
+function MiniTrendLine({ label, value }) {
   if (!value) {
-    return <span style={styles.mutedDash}>—</span>;
+    return (
+      <div style={styles.miniTrendRow}>
+        <span style={styles.miniTrendLabel}>{label}</span>
+        <span style={styles.mutedDash}>—</span>
+      </div>
+    );
   }
 
   const trend = value.trend || value.bias || "Neutral";
-  const score = value.score;
-
   const color = getBiasColorFromText(trend);
 
   return (
-    <div>
-      <div
-        style={{
-          ...styles.tableTrend,
-          color,
-        }}
-      >
-        {trend}
-      </div>
-
-      <div style={styles.tableSubValue}>
-        {score != null ? `${score}/5` : "Available"}
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
-// SENTIMENT CELL
-// ============================================================
-
-function SentimentCell({ sentiment }) {
-  if (!sentiment) {
-    return <span style={styles.mutedDash}>—</span>;
-  }
-
-  const score = Number(sentiment.score ?? 0);
-  const max = Number(sentiment.max ?? 5);
-
-  let label = "Neutral";
-
-  if (score >= 3) {
-    label = "Positive";
-  } else if (score < 2) {
-    label = "Negative";
-  }
-
-  return (
-    <div>
-      <div
-        style={{
-          ...styles.tableTrend,
-          color: getSentimentColor(score),
-        }}
-      >
-        {label}
-      </div>
-
-      <div style={styles.tableSubValue}>
-        Score: {score}/{max}
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
-// FUNDAMENTAL CELL
-// ============================================================
-
-function FundamentalCell({ fundamental }) {
-  if (!fundamental) {
-    return <span style={styles.mutedDash}>—</span>;
-  }
-
-  const bias = normalizeBias(
-    fundamental.bias
-  );
-
-  return (
-    <div>
-      <div
-        style={{
-          ...styles.tableTrend,
-          color: getBiasColor(bias),
-        }}
-      >
-        {bias}
-      </div>
-
-      <div style={styles.tableSubValue}>
-        Score:{" "}
-        {fundamental.score != null
-          ? `${fundamental.score}/${fundamental.max ?? 5}`
-          : "—"}
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
-// INTELLIGENCE DASHBOARD
-// ============================================================
-
-function IntelligenceDashboard({ data }) {
-  return (
-    <div style={styles.intelligenceGrid}>
-      <TechnicalCard technical={data.technical} />
-
-      <FundamentalCard
-        fundamental={data.fundamental}
-      />
-
-      <SentimentCard
-        sentiment={data.sentiment}
-      />
-
-      <MultiTimeframeCard
-        technical={data.technical}
-      />
+    <div style={styles.miniTrendRow}>
+      <span style={styles.miniTrendLabel}>{label}</span>
+      <span style={{ ...styles.miniTrendValue, color }}>{trend}</span>
     </div>
   );
 }
@@ -634,10 +509,7 @@ function IntelligenceDashboard({ data }) {
 function TechnicalCard({ technical }) {
   if (!technical) {
     return (
-      <IntelligenceCard
-        title="Technical Analysis"
-        icon="⌁"
-      >
+      <IntelligenceCard title="Technical Analysis" icon="⌁">
         <EmptyData />
       </IntelligenceCard>
     );
@@ -647,87 +519,25 @@ function TechnicalCard({ technical }) {
   const h4 = technical.h4;
 
   return (
-    <IntelligenceCard
-      title="Technical Analysis"
-      icon="⌁"
-      accent={theme.colors.primary}
-    >
+    <IntelligenceCard title="Technical Analysis" icon="⌁" accent={theme.colors.mint}>
       <div style={styles.cardTopValue}>
         <div>
-          <span style={styles.smallLabel}>
-            Overall Bias
-          </span>
-
-          <strong
-            style={{
-              ...styles.bigValue,
-              color: getBiasColorFromText(
-                technical.trend
-              ),
-            }}
-          >
+          <span style={styles.smallLabel}>Overall Bias</span>
+          <strong style={{ ...styles.bigValue, color: getBiasColorFromText(technical.trend) }}>
             {technical.trend || "Neutral"}
           </strong>
         </div>
-
         <div style={styles.cardScore}>
           {technical.score ?? "—"}
-          <span>
-            / {technical.max ?? 10}
-          </span>
+          <span style={styles.cardScoreSpan}> / {technical.max ?? 10}</span>
         </div>
       </div>
 
       <div style={styles.indicatorList}>
-        <IndicatorLine
-          label="1 Day Trend"
-          value={daily?.trend}
-          color={getBiasColorFromText(
-            daily?.trend
-          )}
-        />
-
-        <IndicatorLine
-          label="1 Day Score"
-          value={
-            daily?.score != null
-              ? `${daily.score} / 5`
-              : "—"
-          }
-        />
-
-        <IndicatorLine
-          label="4 Hour Trend"
-          value={h4?.trend}
-          color={getBiasColorFromText(
-            h4?.trend
-          )}
-        />
-
-        <IndicatorLine
-          label="4 Hour Score"
-          value={
-            h4?.score != null
-              ? `${h4.score} / 5`
-              : "—"
-          }
-        />
-
-        <IndicatorLine
-          label="Current Price"
-          value={
-            daily?.current_price ?? "—"
-          }
-        />
-      </div>
-
-      <div style={styles.cardFooter}>
-        <span>Technical Summary</span>
-
-        <p>
-          {technical.summary ||
-            "Technical market analysis based on available price data and indicators."}
-        </p>
+        <IndicatorLine label="1 Day Trend" value={daily?.trend} color={getBiasColorFromText(daily?.trend)} />
+        <IndicatorLine label="1 Day Score" value={daily?.score != null ? `${daily.score} / 5` : "—"} />
+        <IndicatorLine label="4 Hour Trend" value={h4?.trend} color={getBiasColorFromText(h4?.trend)} />
+        <IndicatorLine label="4 Hour Score" value={h4?.score != null ? `${h4.score} / 5` : "—"} />
       </div>
     </IntelligenceCard>
   );
@@ -740,91 +550,30 @@ function TechnicalCard({ technical }) {
 function FundamentalCard({ fundamental }) {
   if (!fundamental) {
     return (
-      <IntelligenceCard
-        title="Fundamental Analysis"
-        icon="◈"
-      >
+      <IntelligenceCard title="Fundamental" icon="◆">
         <EmptyData />
       </IntelligenceCard>
     );
   }
 
-  const indicators =
-    fundamental.indicators || [];
+  const bias = normalizeBias(fundamental.bias);
 
   return (
-    <IntelligenceCard
-      title="Fundamental Analysis"
-      icon="◈"
-      accent={getBiasColor(
-        normalizeBias(fundamental.bias)
-      )}
-    >
+    <IntelligenceCard title="Fundamental" icon="◆" accent={getBiasColor(bias)}>
       <div style={styles.cardTopValue}>
         <div>
-          <span style={styles.smallLabel}>
-            Overall Bias
-          </span>
-
-          <strong
-            style={{
-              ...styles.bigValue,
-              color: getBiasColor(
-                normalizeBias(
-                  fundamental.bias
-                )
-              ),
-            }}
-          >
-            {normalizeBias(
-              fundamental.bias
-            )}
-          </strong>
+          <span style={styles.smallLabel}>Bias</span>
+          <strong style={{ ...styles.bigValue, color: getBiasColor(bias) }}>{bias}</strong>
         </div>
-
         <div style={styles.cardScore}>
           {fundamental.score ?? "—"}
-          <span>
-            / {fundamental.max ?? 5}
-          </span>
+          <span style={styles.cardScoreSpan}> / {fundamental.max ?? 5}</span>
         </div>
-      </div>
-
-      <div style={styles.indicatorList}>
-        {indicators.length > 0 ? (
-          indicators
-            .slice(0, 5)
-            .map((indicator, index) => (
-              <IndicatorLine
-                key={`${indicator.name}-${index}`}
-                label={indicator.name}
-                value={
-                  indicator.value ??
-                  indicator.bias ??
-                  "—"
-                }
-                color={getBiasColor(
-                  normalizeBias(
-                    indicator.bias
-                  )
-                )}
-              />
-            ))
-        ) : (
-          <IndicatorLine
-            label="Fundamental Status"
-            value={fundamental.status || "Available"}
-          />
-        )}
       </div>
 
       <div style={styles.cardFooter}>
-        <span>Fundamental Summary</span>
-
-        <p>
-          {fundamental.summary ||
-            "Fundamental market factors are being evaluated."}
-        </p>
+        <span style={styles.cardFooterSpan}>Note</span>
+        <p style={styles.cardFooterP}>{fundamental.note || "No additional notes available."}</p>
       </div>
     </IntelligenceCard>
   );
@@ -837,108 +586,47 @@ function FundamentalCard({ fundamental }) {
 function SentimentCard({ sentiment }) {
   if (!sentiment) {
     return (
-      <IntelligenceCard
-        title="News & Sentiment"
-        icon="◉"
-      >
+      <IntelligenceCard title="News & Sentiment" icon="◉">
         <EmptyData />
       </IntelligenceCard>
     );
   }
 
-  const score = Number(
-    sentiment.score ?? 0
-  );
-
-  const max = Number(
-    sentiment.max ?? 5
-  );
-
-  const percentage = Math.max(
-    0,
-    Math.min(100, (score / max) * 100)
-  );
-
-  const label =
-    score >= 3
-      ? "Positive"
-      : score < 2
-      ? "Negative"
-      : "Neutral";
+  const score = Number(sentiment.score ?? 0);
+  const max = Number(sentiment.max ?? 5);
+  const percentage = Math.max(0, Math.min(100, (score / max) * 100));
+  const label = score >= 3 ? "Positive" : score < 2 ? "Negative" : "Neutral";
 
   return (
-    <IntelligenceCard
-      title="News & Sentiment"
-      icon="◉"
-      accent={getSentimentColor(score)}
-    >
+    <IntelligenceCard title="News & Sentiment" icon="◉" accent={getSentimentColor(score)}>
       <div style={styles.cardTopValue}>
         <div>
-          <span style={styles.smallLabel}>
-            Sentiment
-          </span>
-
-          <strong
-            style={{
-              ...styles.bigValue,
-              color: getSentimentColor(score),
-            }}
-          >
-            {label}
-          </strong>
+          <span style={styles.smallLabel}>Sentiment</span>
+          <strong style={{ ...styles.bigValue, color: getSentimentColor(score) }}>{label}</strong>
         </div>
-
         <div style={styles.cardScore}>
           {score}
-          <span>
-            / {max}
-          </span>
+          <span style={styles.cardScoreSpan}> / {max}</span>
         </div>
       </div>
 
       <div style={styles.sentimentVisual}>
-        <div style={styles.sentimentCircle}>
-          <strong>
-            {Math.round(percentage)}%
-          </strong>
-
-          <span>Positive</span>
+        <div style={{ ...styles.sentimentCircle, borderColor: getSentimentColor(score) }}>
+          <strong style={styles.sentimentCircleStrong}>{Math.round(percentage)}%</strong>
+          <span style={styles.sentimentCircleSpan}>Positive</span>
         </div>
 
         <div style={styles.sentimentStats}>
           <div>
-            <span
-              style={{
-                ...styles.sentimentDot,
-                backgroundColor:
-                  theme.colors.green,
-              }}
-            ></span>
-
+            <span style={{ ...styles.sentimentDot, backgroundColor: theme.colors.mint }} />
             Positive
           </div>
-
           <div>
-            <span
-              style={{
-                ...styles.sentimentDot,
-                backgroundColor:
-                  theme.colors.yellow,
-              }}
-            ></span>
-
+            <span style={{ ...styles.sentimentDot, backgroundColor: theme.colors.amber }} />
             Neutral
           </div>
-
           <div>
-            <span
-              style={{
-                ...styles.sentimentDot,
-                backgroundColor:
-                  theme.colors.red,
-              }}
-            ></span>
-
+            <span style={{ ...styles.sentimentDot, backgroundColor: theme.colors.red }} />
             Negative
           </div>
         </div>
@@ -946,19 +634,12 @@ function SentimentCard({ sentiment }) {
 
       <div style={styles.newsInfo}>
         <span>Articles Analyzed</span>
-
-        <strong>
-          {sentiment.articles ?? 0}
-        </strong>
+        <strong style={styles.newsInfoStrong}>{sentiment.articles ?? 0}</strong>
       </div>
 
       <div style={styles.cardFooter}>
-        <span>News Sentiment</span>
-
-        <p>
-          {sentiment.note ||
-            "Latest available news and sentiment data."}
-        </p>
+        <span style={styles.cardFooterSpan}>News Sentiment</span>
+        <p style={styles.cardFooterP}>{sentiment.note || "Latest available news and sentiment data."}</p>
       </div>
     </IntelligenceCard>
   );
@@ -970,34 +651,15 @@ function SentimentCard({ sentiment }) {
 
 function MultiTimeframeCard({ technical }) {
   const timeframes = [
-    {
-      name: "1 Day",
-      data: technical?.daily,
-    },
-    {
-      name: "4 Hour",
-      data: technical?.h4,
-    },
-    {
-      name: "1 Hour",
-      data: technical?.h1,
-    },
-    {
-      name: "30 Min",
-      data: technical?.m30,
-    },
-    {
-      name: "15 Min",
-      data: technical?.m15,
-    },
+    { name: "1 Day", data: technical?.daily },
+    { name: "4 Hour", data: technical?.h4 },
+    { name: "1 Hour", data: technical?.h1 },
+    { name: "30 Min", data: technical?.m30 },
+    { name: "15 Min", data: technical?.m15 },
   ];
 
   return (
-    <IntelligenceCard
-      title="Multi-Timeframe Analysis"
-      icon="◫"
-      accent={theme.colors.yellow}
-    >
+    <IntelligenceCard title="Multi-Timeframe Analysis" icon="◫" accent={theme.colors.amber}>
       <div style={styles.timeframeHeader}>
         <span>TIMEFRAME</span>
         <span>TREND</span>
@@ -1007,65 +669,29 @@ function MultiTimeframeCard({ technical }) {
 
       <div>
         {timeframes.map((item) => {
-          const trend =
-            item.data?.trend ||
-            item.data?.bias ||
-            "—";
-
-          const score =
-            item.data?.score;
+          const trend = item.data?.trend || item.data?.bias || "—";
+          const score = item.data?.score;
 
           return (
-            <div
-              key={item.name}
-              style={styles.timeframeRow}
-            >
-              <span style={styles.timeframeName}>
-                {item.name}
+            <div key={item.name} style={styles.timeframeRow}>
+              <span style={styles.timeframeName}>{item.name}</span>
+              <span style={{ color: getBiasColorFromText(trend), fontWeight: 800 }}>
+                {trend !== "—" ? "↑" : "—"}
               </span>
-
-              <span
-                style={{
-                  color: getBiasColorFromText(
-                    trend
-                  ),
-                  fontWeight: 800,
-                }}
-              >
-                {trend !== "—"
-                  ? "↑"
-                  : "—"}
-              </span>
-
-              <span
-                style={{
-                  color: getBiasColorFromText(
-                    trend
-                  ),
-                  fontWeight: 700,
-                  fontSize: "11px",
-                }}
-              >
+              <span style={{ color: getBiasColorFromText(trend), fontWeight: 700, fontSize: "11px" }}>
                 {trend}
               </span>
-
-              <span style={styles.timeframeScore}>
-                {score != null
-                  ? `${score} / 5`
-                  : "—"}
-              </span>
+              <span style={styles.timeframeScore}>{score != null ? `${score} / 5` : "—"}</span>
             </div>
           );
         })}
       </div>
 
       <div style={styles.cardFooter}>
-        <span>Overall Summary</span>
-
-        <p>
-          Stronger alignment across higher
-          timeframes receives greater weight in
-          the market intelligence score.
+        <span style={styles.cardFooterSpan}>Overall Summary</span>
+        <p style={styles.cardFooterP}>
+          Stronger alignment across higher timeframes receives greater weight in the market
+          intelligence score.
         </p>
       </div>
     </IntelligenceCard>
@@ -1073,82 +699,40 @@ function MultiTimeframeCard({ technical }) {
 }
 
 // ============================================================
-// INTELLIGENCE CARD
+// SHARED CARD SHELL
 // ============================================================
 
-function IntelligenceCard({
-  title,
-  icon,
-  accent,
-  children,
-}) {
+function IntelligenceCard({ title, icon, accent, children }) {
   return (
     <div
+      className="glass-hover"
       style={{
         ...styles.intelligenceCard,
-        borderTop: `2px solid ${
-          accent || theme.colors.border
-        }`,
+        borderTop: `2px solid ${accent || theme.colors.border}`,
       }}
     >
       <div style={styles.intelligenceCardHeader}>
         <div style={styles.intelligenceTitle}>
-          <span
-            style={{
-              ...styles.cardIcon,
-              color:
-                accent ||
-                theme.colors.primary,
-            }}
-          >
-            {icon}
-          </span>
-
+          <span style={{ ...styles.cardIcon, color: accent || theme.colors.mint }}>{icon}</span>
           {title}
         </div>
       </div>
-
       {children}
     </div>
   );
 }
 
-// ============================================================
-// INDICATOR LINE
-// ============================================================
-
-function IndicatorLine({
-  label,
-  value,
-  color,
-}) {
+function IndicatorLine({ label, value, color }) {
   return (
     <div style={styles.indicatorLine}>
       <span>{label}</span>
-
-      <strong
-        style={{
-          color:
-            color ||
-            theme.colors.text,
-        }}
-      >
-        {value || "—"}
-      </strong>
+      <strong style={{ color: color || theme.colors.text }}>{value || "—"}</strong>
     </div>
   );
 }
 
-// ============================================================
-// EMPTY DATA
-// ============================================================
-
 function EmptyData() {
-  return (
-    <div style={styles.emptyData}>
-      No data available.
-    </div>
-  );
+  return <div style={styles.emptyData}>No data available.</div>;
 }
 
 // ============================================================
@@ -1157,121 +741,49 @@ function EmptyData() {
 
 function getBias(asset) {
   if (!asset) return "Neutral";
-
-  if (asset.trend) {
-    return normalizeBias(asset.trend);
-  }
-
-  if (asset.bias) {
-    return normalizeBias(asset.bias);
-  }
-
-  if (Number(asset.score) > 0) {
-    return "Bullish";
-  }
-
-  if (Number(asset.score) < 0) {
-    return "Bearish";
-  }
-
+  if (asset.trend) return normalizeBias(asset.trend);
+  if (asset.bias) return normalizeBias(asset.bias);
+  if (Number(asset.score) > 0) return "Bullish";
+  if (Number(asset.score) < 0) return "Bearish";
   return "Neutral";
 }
 
 function normalizeBias(value) {
   if (!value) return "Neutral";
-
   const text = String(value).toLowerCase();
-
-  if (
-    text.includes("very bullish") ||
-    text.includes("bullish")
-  ) {
-    return "Bullish";
-  }
-
-  if (
-    text.includes("very bearish") ||
-    text.includes("bearish")
-  ) {
-    return "Bearish";
-  }
-
+  if (text.includes("bullish")) return "Bullish";
+  if (text.includes("bearish")) return "Bearish";
   return "Neutral";
 }
 
 function getBiasColor(bias) {
-  if (bias === "Bullish") {
-    return theme.colors.green;
-  }
-
-  if (bias === "Bearish") {
-    return theme.colors.red;
-  }
-
-  return theme.colors.yellow;
+  if (bias === "Bullish") return theme.colors.mint;
+  if (bias === "Bearish") return theme.colors.red;
+  return theme.colors.amber;
 }
 
 function getBiasBackground(bias) {
-  if (bias === "Bullish") {
-    return theme.colors.greenMuted;
-  }
-
-  if (bias === "Bearish") {
-    return theme.colors.redMuted;
-  }
-
-  return "rgba(234, 179, 8, 0.12)";
+  if (bias === "Bullish") return theme.colors.greenMuted;
+  if (bias === "Bearish") return theme.colors.redMuted;
+  return theme.colors.amberMuted;
 }
 
 function getBiasColorFromText(value) {
-  if (!value) {
-    return theme.colors.textMuted;
-  }
-
+  if (!value) return theme.colors.textMuted;
   const text = String(value).toLowerCase();
-
-  if (text.includes("bull")) {
-    return theme.colors.green;
-  }
-
-  if (text.includes("bear")) {
-    return theme.colors.red;
-  }
-
-  return theme.colors.yellow;
+  if (text.includes("bull")) return theme.colors.mint;
+  if (text.includes("bear")) return theme.colors.red;
+  return theme.colors.amber;
 }
 
 function getSentimentColor(score) {
-  if (score >= 3) {
-    return theme.colors.green;
-  }
-
-  if (score < 2) {
-    return theme.colors.red;
-  }
-
-  return theme.colors.yellow;
-}
-
-function formatScore(score) {
-  if (score == null) {
-    return "—";
-  }
-
-  const number = Number(score);
-
-  if (Number.isNaN(number)) {
-    return score;
-  }
-
-  return number > 0
-    ? `+${number}`
-    : String(number);
+  if (score >= 3) return theme.colors.mint;
+  if (score < 2) return theme.colors.red;
+  return theme.colors.amber;
 }
 
 function getSymbol(asset) {
   if (!asset) return "—";
-
   const map = {
     Gold: "XAUUSD",
     Bitcoin: "BTCUSD",
@@ -1280,39 +792,16 @@ function getSymbol(asset) {
     Euro: "EURUSD",
     "US Dollar / Yen": "USDJPY",
   };
-
   return map[asset] || asset;
 }
 
 function getCategory(asset) {
   if (!asset) return "Market";
-
   const text = asset.toLowerCase();
-
-  if (
-    text.includes("gold") ||
-    text.includes("silver")
-  ) {
-    return "Metal";
-  }
-
-  if (
-    text.includes("bitcoin") ||
-    text.includes("ethereum") ||
-    text.includes("crypto")
-  ) {
-    return "Crypto";
-  }
-
-  if (
-    text.includes("pound") ||
-    text.includes("euro") ||
-    text.includes("yen") ||
-    text.includes("usd")
-  ) {
+  if (text.includes("gold") || text.includes("silver")) return "Metal";
+  if (text.includes("bitcoin") || text.includes("ethereum") || text.includes("crypto")) return "Crypto";
+  if (text.includes("pound") || text.includes("euro") || text.includes("yen") || text.includes("usd"))
     return "Forex";
-  }
-
   return "Market";
 }
 
@@ -1328,8 +817,46 @@ const styles = {
   },
 
   main: {
+    position: "relative",
     flex: 1,
     minWidth: 0,
+    overflow: "hidden",
+  },
+
+  bgLayer: {
+    position: "fixed",
+    inset: 0,
+    zIndex: 0,
+    pointerEvents: "none",
+  },
+
+  pageGlowMint: {
+    position: "fixed",
+    top: "-10%",
+    right: "10%",
+    width: 420,
+    height: 420,
+    borderRadius: "50%",
+    background: "radial-gradient(circle, rgba(0,229,160,0.10), transparent 70%)",
+    zIndex: 0,
+    pointerEvents: "none",
+  },
+
+  pageGlowRed: {
+    position: "fixed",
+    bottom: "5%",
+    left: "5%",
+    width: 380,
+    height: 380,
+    borderRadius: "50%",
+    background: "radial-gradient(circle, rgba(255,77,106,0.08), transparent 70%)",
+    zIndex: 0,
+    pointerEvents: "none",
+  },
+
+  content: {
+    position: "relative",
+    zIndex: 1,
     padding: "28px 30px 50px",
     maxWidth: "1500px",
     margin: "0 auto",
@@ -1349,20 +876,27 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: "22px",
+    flexWrap: "wrap",
+    gap: "12px",
   },
 
   pageTitle: {
-    color: theme.colors.text,
-    fontSize: "27px",
-    fontWeight: 800,
+    fontFamily: theme.font.display,
+    fontSize: "30px",
+    fontWeight: 700,
     margin: 0,
     letterSpacing: "-0.03em",
+    background: `linear-gradient(90deg, ${theme.colors.text}, ${theme.colors.mint})`,
+    WebkitBackgroundClip: "text",
+    backgroundClip: "text",
+    WebkitTextFillColor: "transparent",
   },
 
   pageSubtitle: {
     color: theme.colors.textMuted,
     fontSize: "12.5px",
-    marginTop: "5px",
+    marginTop: "6px",
+    maxWidth: 520,
   },
 
   liveBadge: {
@@ -1372,24 +906,35 @@ const styles = {
     padding: "7px 12px",
     borderRadius: "7px",
     backgroundColor: theme.colors.greenMuted,
-    color: theme.colors.green,
+    color: theme.colors.mint,
     fontSize: "10px",
     fontWeight: 800,
+    height: "fit-content",
   },
 
   liveDot: {
     width: "6px",
     height: "6px",
     borderRadius: "50%",
-    backgroundColor: theme.colors.green,
+    backgroundColor: theme.colors.mint,
+  },
+
+  errorBox: {
+    padding: "11px 14px",
+    marginBottom: "15px",
+    borderRadius: "7px",
+    backgroundColor: theme.colors.redMuted,
+    color: theme.colors.red,
+    fontSize: "11px",
   },
 
   filterRow: {
     display: "flex",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: "10px",
-    marginBottom: "20px",
+    gap: "12px",
+    marginBottom: "22px",
+    flexWrap: "wrap",
   },
 
   searchBox: {
@@ -1398,8 +943,9 @@ const styles = {
     width: "250px",
     height: "38px",
     border: `1px solid ${theme.colors.border}`,
-    borderRadius: "7px",
+    borderRadius: "10px",
     backgroundColor: theme.colors.bgCard,
+    backdropFilter: "blur(10px)",
   },
 
   searchIcon: {
@@ -1419,178 +965,122 @@ const styles = {
     fontSize: "12px",
   },
 
-  filterSelect: {
-    height: "38px",
-    minWidth: "135px",
-    border: `1px solid ${theme.colors.border}`,
-    borderRadius: "7px",
-    backgroundColor: theme.colors.bgCard,
-    color: theme.colors.text,
-    padding: "0 12px",
-    fontSize: "12px",
-    outline: "none",
+  pillRow: {
+    display: "flex",
+    gap: "8px",
   },
 
-  card: {
-    backgroundColor: theme.colors.bgCard,
+  pillButton: {
+    height: "38px",
+    padding: "0 16px",
+    borderRadius: "20px",
     border: `1px solid ${theme.colors.border}`,
-    borderRadius: "12px",
-    overflow: "hidden",
+    backgroundColor: theme.colors.bgCard,
+    color: theme.colors.textMuted,
+    fontSize: "11px",
+    fontWeight: 700,
+    cursor: "pointer",
+    transition: "all 0.15s ease",
+  },
+
+  pillButtonActive: (b) => ({
+    color:
+      b === "Bullish" ? theme.colors.mint : b === "Bearish" ? theme.colors.red : b === "Neutral" ? theme.colors.amber : theme.colors.text,
+    borderColor:
+      b === "Bullish" ? theme.colors.mint : b === "Bearish" ? theme.colors.red : b === "Neutral" ? theme.colors.amber : theme.colors.borderLight,
+    backgroundColor:
+      b === "Bullish" ? theme.colors.greenMuted : b === "Bearish" ? theme.colors.redMuted : b === "Neutral" ? theme.colors.amberMuted : theme.colors.bgHover,
+  }),
+
+  heroPanel: {
+    display: "flex",
+    gap: "40px",
+    alignItems: "center",
+    flexWrap: "wrap",
+    background: theme.glass.background,
+    backdropFilter: theme.glass.backdropFilter,
+    border: `1px solid ${theme.colors.border}`,
+    borderRadius: theme.radius.lg,
+    padding: "36px 40px",
+    marginBottom: "34px",
+    boxShadow: theme.shadow.elevated,
+  },
+
+  heroLeft: {
+    flexShrink: 0,
+  },
+
+  heroRight: {
+    flex: 1,
+    minWidth: 260,
+  },
+
+  heroTopRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: "16px",
+    marginBottom: "14px",
+    flexWrap: "wrap",
+  },
+
+  heroAssetName: {
+    fontFamily: theme.font.display,
+    fontSize: "24px",
+    fontWeight: 700,
+    color: theme.colors.text,
+  },
+
+  heroPrice: {
+    fontFamily: theme.font.mono,
+    fontSize: "14px",
+    color: theme.colors.textMuted,
+    marginTop: "4px",
+  },
+
+  heroLoading: {
+    color: theme.colors.textMuted,
+    fontSize: "12.5px",
+    padding: "10px 0",
+  },
+
+  biasBadgeLg: {
+    display: "inline-block",
+    padding: "6px 14px",
+    borderRadius: "20px",
+    fontSize: "11px",
+    fontWeight: 800,
+    letterSpacing: "0.5px",
     marginBottom: "20px",
   },
 
-  cardHeader: {
+  subRingRow: {
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "20px 22px",
-    borderBottom: `1px solid ${theme.colors.border}`,
+    gap: "22px",
+    flexWrap: "wrap",
   },
 
-  cardTitle: {
-    color: theme.colors.text,
-    fontSize: "16px",
-    fontWeight: 800,
-    margin: 0,
+  ringWrap: {
+    textAlign: "center",
   },
 
-  cardSubtitle: {
-    color: theme.colors.textMuted,
-    fontSize: "11px",
-    marginTop: "5px",
-    marginBottom: 0,
-  },
-
-  engineStatus: {
+  ringLabel: {
+    position: "absolute",
+    inset: 0,
     display: "flex",
     alignItems: "center",
-    gap: "7px",
-    color: theme.colors.textMuted,
-    fontSize: "10px",
-  },
-
-  statusDot: {
-    width: "6px",
-    height: "6px",
-    borderRadius: "50%",
-    backgroundColor: theme.colors.green,
-  },
-
-  tableScroll: {
-    width: "100%",
-    overflowX: "auto",
-  },
-
-  table: {
-    width: "100%",
-    minWidth: "1100px",
-    borderCollapse: "collapse",
-  },
-
-  th: {
-    padding: "10px 12px",
-    textAlign: "left",
-    color: theme.colors.textMuted,
-    backgroundColor: theme.colors.bgHover,
-    fontSize: "9px",
-    fontWeight: 800,
-    letterSpacing: "0.05em",
-    borderRight: `1px solid ${theme.colors.border}`,
-    borderBottom: `1px solid ${theme.colors.border}`,
-    whiteSpace: "nowrap",
-  },
-
-  tr: {
-    cursor: "pointer",
-    transition: "background-color 0.15s",
-  },
-
-  selectedRow: {
-    backgroundColor: "rgba(79, 70, 229, 0.07)",
-  },
-
-  td: {
-    padding: "12px",
-    borderRight: `1px solid ${theme.colors.border}`,
-    borderBottom: `1px solid ${theme.colors.border}`,
-    verticalAlign: "middle",
-    fontSize: "11px",
-  },
-
-  symbol: {
-    color: "#6ea8ff",
-    fontWeight: 800,
-    fontSize: "12px",
-  },
-
-  category: {
-    color: theme.colors.textFaint,
-    fontSize: "9px",
-    marginTop: "3px",
-  },
-
-  assetText: {
-    color: theme.colors.text,
-    fontSize: "11px",
-  },
-
-  biasBadge: {
-    display: "inline-block",
-    padding: "4px 8px",
-    borderRadius: "12px",
-    fontSize: "9px",
-    fontWeight: 800,
-  },
-
-  scoreBadge: {
-    display: "inline-block",
-    padding: "4px 8px",
-    borderRadius: "5px",
-    fontSize: "10px",
-    fontWeight: 800,
-  },
-
-  price: {
-    color: theme.colors.text,
-    fontWeight: 700,
-    fontFamily: "monospace",
-    fontSize: "11px",
-  },
-
-  tableTrend: {
-    fontSize: "10px",
-    fontWeight: 800,
-  },
-
-  tableSubValue: {
-    color: theme.colors.textFaint,
-    fontSize: "9px",
-    marginTop: "3px",
-  },
-
-  mutedDash: {
-    color: theme.colors.textFaint,
+    justifyContent: "center",
     fontSize: "13px",
+    fontWeight: 700,
+    color: theme.colors.text,
   },
 
-  arrow: {
+  ringCaption: {
+    marginTop: "6px",
+    fontSize: "9px",
     color: theme.colors.textMuted,
-    fontSize: "18px",
-  },
-
-  assetPanel: {
-    backgroundColor: theme.colors.bgCard,
-    border: `1px solid ${theme.colors.border}`,
-    borderRadius: "12px",
-    overflow: "hidden",
-  },
-
-  assetPanelHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "19px 22px",
-    borderBottom: `1px solid ${theme.colors.border}`,
+    letterSpacing: "1px",
+    textTransform: "uppercase",
   },
 
   analyzeRow: {
@@ -1599,11 +1089,11 @@ const styles = {
   },
 
   assetSelect: {
-    width: "190px",
+    width: "180px",
     height: "37px",
     backgroundColor: theme.colors.bg,
     border: `1px solid ${theme.colors.border}`,
-    borderRadius: "7px",
+    borderRadius: "8px",
     color: theme.colors.text,
     padding: "0 11px",
     outline: "none",
@@ -1614,32 +1104,161 @@ const styles = {
     height: "37px",
     padding: "0 19px",
     border: "none",
-    borderRadius: "7px",
-    backgroundColor: theme.colors.primary,
-    color: "#fff",
+    borderRadius: "8px",
+    backgroundColor: theme.colors.mint,
+    color: "#06070a",
     fontSize: "11px",
     fontWeight: 800,
     cursor: "pointer",
   },
 
+  sectionHeaderRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "16px",
+    flexWrap: "wrap",
+    gap: "10px",
+  },
+
+  sectionTitle: {
+    fontFamily: theme.font.display,
+    color: theme.colors.text,
+    fontSize: "18px",
+    fontWeight: 700,
+    margin: 0,
+  },
+
+  sectionSubtitle: {
+    color: theme.colors.textMuted,
+    fontSize: "11.5px",
+    marginTop: "5px",
+  },
+
+  engineStatus: {
+    display: "flex",
+    alignItems: "center",
+    gap: "7px",
+    color: theme.colors.textMuted,
+    fontSize: "10.5px",
+  },
+
+  statusDot: {
+    width: "6px",
+    height: "6px",
+    borderRadius: "50%",
+    backgroundColor: theme.colors.mint,
+  },
+
+  cardGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+    gap: "16px",
+    marginBottom: "38px",
+  },
+
+  assetCard: {
+    background: theme.glass.background,
+    backdropFilter: theme.glass.backdropFilter,
+    border: `1px solid ${theme.colors.border}`,
+    borderRadius: theme.radius.md,
+    padding: "18px",
+    cursor: "pointer",
+  },
+
+  assetCardSelected: {
+    borderColor: theme.colors.mint,
+    boxShadow: theme.shadow.glowMint,
+  },
+
+  assetCardTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: "10px",
+  },
+
+  assetCardSymbol: {
+    fontFamily: theme.font.mono,
+    fontSize: "13px",
+    fontWeight: 700,
+    color: theme.colors.text,
+  },
+
+  assetCardCategory: {
+    fontSize: "9.5px",
+    color: theme.colors.textFaint,
+    marginTop: "2px",
+  },
+
+  biasBadge: {
+    display: "inline-block",
+    padding: "4px 9px",
+    borderRadius: "12px",
+    fontSize: "9px",
+    fontWeight: 800,
+  },
+
+  assetCardBody: {
+    display: "flex",
+    alignItems: "center",
+    gap: "14px",
+  },
+
+  assetCardStats: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  assetCardName: {
+    fontSize: "13px",
+    fontWeight: 700,
+    color: theme.colors.text,
+    marginBottom: "2px",
+  },
+
+  assetCardPrice: {
+    fontFamily: theme.font.mono,
+    fontSize: "11px",
+    color: theme.colors.textMuted,
+    marginBottom: "8px",
+  },
+
+  miniTrendRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    fontSize: "9.5px",
+    padding: "3px 0",
+  },
+
+  miniTrendLabel: {
+    color: theme.colors.textFaint,
+  },
+
+  miniTrendValue: {
+    fontWeight: 700,
+  },
+
+  mutedDash: {
+    color: theme.colors.textFaint,
+  },
+
   intelligenceGrid: {
     display: "grid",
-    gridTemplateColumns:
-      "repeat(4, minmax(0, 1fr))",
-    gap: "10px",
-    padding: "16px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "16px",
   },
 
   intelligenceCard: {
-    minWidth: 0,
-    backgroundColor: theme.colors.bg,
+    background: theme.glass.background,
+    backdropFilter: theme.glass.backdropFilter,
     border: `1px solid ${theme.colors.border}`,
-    borderRadius: "9px",
+    borderRadius: theme.radius.md,
     overflow: "hidden",
   },
 
   intelligenceCardHeader: {
-    padding: "13px 14px",
+    padding: "14px 16px",
     borderBottom: `1px solid ${theme.colors.border}`,
     backgroundColor: theme.colors.bgHover,
   },
@@ -1647,9 +1266,9 @@ const styles = {
   intelligenceTitle: {
     display: "flex",
     alignItems: "center",
-    gap: "7px",
+    gap: "8px",
     color: theme.colors.text,
-    fontSize: "12px",
+    fontSize: "12.5px",
     fontWeight: 800,
   },
 
@@ -1661,35 +1280,35 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "14px",
+    padding: "16px",
   },
 
   smallLabel: {
     display: "block",
     color: theme.colors.textMuted,
-    fontSize: "9px",
+    fontSize: "9.5px",
     marginBottom: "4px",
   },
 
   bigValue: {
-    color: theme.colors.text,
-    fontSize: "14px",
+    fontSize: "15px",
     fontWeight: 800,
   },
 
   cardScore: {
     color: theme.colors.text,
-    fontSize: "19px",
+    fontSize: "20px",
     fontWeight: 900,
   },
 
   cardScoreSpan: {
     color: theme.colors.textFaint,
     fontSize: "10px",
+    fontWeight: 500,
   },
 
   indicatorList: {
-    padding: "0 14px 10px",
+    padding: "0 16px 12px",
   },
 
   indicatorLine: {
@@ -1697,34 +1316,27 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     gap: "8px",
-    padding: "7px 0",
+    padding: "8px 0",
     borderBottom: `1px solid ${theme.colors.border}`,
-  },
-
-  indicatorLineLabel: {
+    fontSize: "10.5px",
     color: theme.colors.textMuted,
-    fontSize: "9px",
-  },
-
-  indicatorLineValue: {
-    fontSize: "9px",
   },
 
   cardFooter: {
-    padding: "12px 14px",
+    padding: "13px 16px",
     backgroundColor: theme.colors.bgHover,
     borderTop: `1px solid ${theme.colors.border}`,
   },
 
   cardFooterSpan: {
     color: theme.colors.textMuted,
-    fontSize: "9px",
+    fontSize: "9.5px",
   },
 
   cardFooterP: {
     color: theme.colors.textMuted,
-    fontSize: "9px",
-    lineHeight: 1.5,
+    fontSize: "9.5px",
+    lineHeight: 1.6,
     margin: "6px 0 0",
   },
 
@@ -1732,15 +1344,15 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: "16px",
-    padding: "10px 14px 14px",
+    gap: "18px",
+    padding: "10px 16px 16px",
   },
 
   sentimentCircle: {
-    width: "74px",
-    height: "74px",
+    width: "76px",
+    height: "76px",
     borderRadius: "50%",
-    border: `8px solid ${theme.colors.green}`,
+    border: "8px solid",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
@@ -1762,9 +1374,9 @@ const styles = {
   sentimentStats: {
     display: "flex",
     flexDirection: "column",
-    gap: "7px",
+    gap: "8px",
     color: theme.colors.textMuted,
-    fontSize: "9px",
+    fontSize: "9.5px",
   },
 
   sentimentDot: {
@@ -1778,11 +1390,11 @@ const styles = {
   newsInfo: {
     display: "flex",
     justifyContent: "space-between",
-    margin: "0 14px 10px",
+    margin: "0 16px 10px",
     padding: "8px 0",
     borderTop: `1px solid ${theme.colors.border}`,
     color: theme.colors.textMuted,
-    fontSize: "9px",
+    fontSize: "9.5px",
   },
 
   newsInfoStrong: {
@@ -1793,10 +1405,11 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "1.2fr .7fr 1fr .9fr",
     gap: "5px",
-    padding: "11px 14px 7px",
+    padding: "12px 16px 8px",
     color: theme.colors.textFaint,
-    fontSize: "8px",
+    fontSize: "8.5px",
     fontWeight: 800,
+    letterSpacing: "0.5px",
   },
 
   timeframeRow: {
@@ -1804,9 +1417,9 @@ const styles = {
     gridTemplateColumns: "1.2fr .7fr 1fr .9fr",
     gap: "5px",
     alignItems: "center",
-    padding: "9px 14px",
+    padding: "9px 16px",
     borderTop: `1px solid ${theme.colors.border}`,
-    fontSize: "9px",
+    fontSize: "9.5px",
   },
 
   timeframeName: {
@@ -1823,29 +1436,17 @@ const styles = {
     textAlign: "center",
     color: theme.colors.textMuted,
     fontSize: "12px",
-  },
-
-  loadingPanel: {
-    padding: "45px",
-    textAlign: "center",
-    color: theme.colors.textMuted,
-    fontSize: "12px",
+    background: theme.glass.background,
+    borderRadius: theme.radius.md,
+    border: `1px solid ${theme.colors.border}`,
+    marginBottom: "38px",
   },
 
   emptyData: {
-    padding: "30px 14px",
+    padding: "30px 16px",
     color: theme.colors.textFaint,
     textAlign: "center",
     fontSize: "10px",
-  },
-
-  errorBox: {
-    padding: "11px 14px",
-    marginBottom: "15px",
-    borderRadius: "7px",
-    backgroundColor: theme.colors.redMuted,
-    color: theme.colors.red,
-    fontSize: "11px",
   },
 };
 
