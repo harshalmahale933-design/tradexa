@@ -299,17 +299,23 @@ function MarketIntelligence({ user, onLogout, onNavigate }) {
                 </div>
               ) : intelligence ? (
                 <>
-                  <span
-                    style={{
-                      ...styles.biasBadgeLg,
-                      color: getBiasColorFromText(intelligence.technical?.trend),
-                      backgroundColor: getBiasBackground(
-                        normalizeBias(intelligence.technical?.trend)
-                      ),
-                    }}
-                  >
-                    ● {normalizeBias(intelligence.technical?.trend)} Bias
-                  </span>
+                  {(() => {
+                    const heroBias = getBiasFromScore(
+                      intelligence.overall_score,
+                      intelligence.technical?.trend
+                    );
+                    return (
+                      <span
+                        style={{
+                          ...styles.biasBadgeLg,
+                          color: getBiasColor(heroBias),
+                          backgroundColor: getBiasBackground(heroBias),
+                        }}
+                      >
+                        ● {heroBias} ({formatSignedScore(intelligence.overall_score)}) Bias
+                      </span>
+                    );
+                  })()}
 
                   <div style={styles.subRingRow}>
                     <RingMeter
@@ -426,7 +432,7 @@ function RingMeter({ value, max = 5, color, label }) {
             style={{ filter: `drop-shadow(0 0 4px ${color}88)`, transition: "stroke-dashoffset 1s ease" }}
           />
         </svg>
-        <div style={styles.ringLabel}>{value != null ? value : "—"}</div>
+        <div style={styles.ringLabel}>{formatSignedScore(value)}</div>
       </div>
       <div style={styles.ringCaption}>{label}</div>
     </div>
@@ -491,13 +497,15 @@ function MiniTrendLine({ label, value }) {
     );
   }
 
-  const trend = value.trend || value.bias || "Neutral";
-  const color = getBiasColorFromText(trend);
+  const bias = getBiasFromScore(value.score, value.trend || value.bias);
+  const color = getBiasColor(bias);
 
   return (
     <div style={styles.miniTrendRow}>
       <span style={styles.miniTrendLabel}>{label}</span>
-      <span style={{ ...styles.miniTrendValue, color }}>{trend}</span>
+      <span style={{ ...styles.miniTrendValue, color }}>
+        {bias} {value.score != null ? `(${formatSignedScore(value.score)})` : ""}
+      </span>
     </div>
   );
 }
@@ -517,27 +525,36 @@ function TechnicalCard({ technical }) {
 
   const daily = technical.daily;
   const h4 = technical.h4;
+  const overallBias = getBiasFromScore(technical.score, technical.trend);
+  const dailyBias = getBiasFromScore(daily?.score, daily?.trend);
+  const h4Bias = getBiasFromScore(h4?.score, h4?.trend);
 
   return (
     <IntelligenceCard title="Technical Analysis" icon="⌁" accent={theme.colors.mint}>
       <div style={styles.cardTopValue}>
         <div>
           <span style={styles.smallLabel}>Overall Bias</span>
-          <strong style={{ ...styles.bigValue, color: getBiasColorFromText(technical.trend) }}>
-            {technical.trend || "Neutral"}
+          <strong style={{ ...styles.bigValue, color: getBiasColor(overallBias) }}>
+            {overallBias}
           </strong>
         </div>
         <div style={styles.cardScore}>
-          {technical.score ?? "—"}
+          {formatSignedScore(technical.score)}
           <span style={styles.cardScoreSpan}> / {technical.max ?? 10}</span>
         </div>
       </div>
 
       <div style={styles.indicatorList}>
-        <IndicatorLine label="1 Day Trend" value={daily?.trend} color={getBiasColorFromText(daily?.trend)} />
-        <IndicatorLine label="1 Day Score" value={daily?.score != null ? `${daily.score} / 5` : "—"} />
-        <IndicatorLine label="4 Hour Trend" value={h4?.trend} color={getBiasColorFromText(h4?.trend)} />
-        <IndicatorLine label="4 Hour Score" value={h4?.score != null ? `${h4.score} / 5` : "—"} />
+        <IndicatorLine label="1 Day Trend" value={dailyBias} color={getBiasColor(dailyBias)} />
+        <IndicatorLine
+          label="1 Day Score"
+          value={daily?.score != null ? `${formatSignedScore(daily.score)} / 5` : "—"}
+        />
+        <IndicatorLine label="4 Hour Trend" value={h4Bias} color={getBiasColor(h4Bias)} />
+        <IndicatorLine
+          label="4 Hour Score"
+          value={h4?.score != null ? `${formatSignedScore(h4.score)} / 5` : "—"}
+        />
       </div>
     </IntelligenceCard>
   );
@@ -556,7 +573,7 @@ function FundamentalCard({ fundamental }) {
     );
   }
 
-  const bias = normalizeBias(fundamental.bias);
+  const bias = getBiasFromScore(fundamental.score, fundamental.bias);
 
   return (
     <IntelligenceCard title="Fundamental" icon="◆" accent={getBiasColor(bias)}>
@@ -566,7 +583,7 @@ function FundamentalCard({ fundamental }) {
           <strong style={{ ...styles.bigValue, color: getBiasColor(bias) }}>{bias}</strong>
         </div>
         <div style={styles.cardScore}>
-          {fundamental.score ?? "—"}
+          {formatSignedScore(fundamental.score)}
           <span style={styles.cardScoreSpan}> / {fundamental.max ?? 5}</span>
         </div>
       </div>
@@ -595,7 +612,7 @@ function SentimentCard({ sentiment }) {
   const score = Number(sentiment.score ?? 0);
   const max = Number(sentiment.max ?? 5);
   const percentage = Math.max(0, Math.min(100, (score / max) * 100));
-  const label = score >= 3 ? "Positive" : score < 2 ? "Negative" : "Neutral";
+  const label = score === 0 ? "Neutral" : score > 0 ? "Positive" : "Negative";
 
   return (
     <IntelligenceCard title="News & Sentiment" icon="◉" accent={getSentimentColor(score)}>
@@ -605,7 +622,7 @@ function SentimentCard({ sentiment }) {
           <strong style={{ ...styles.bigValue, color: getSentimentColor(score) }}>{label}</strong>
         </div>
         <div style={styles.cardScore}>
-          {score}
+          {formatSignedScore(score)}
           <span style={styles.cardScoreSpan}> / {max}</span>
         </div>
       </div>
@@ -669,19 +686,22 @@ function MultiTimeframeCard({ technical }) {
 
       <div>
         {timeframes.map((item) => {
-          const trend = item.data?.trend || item.data?.bias || "—";
           const score = item.data?.score;
+          const hasData = item.data != null;
+          const bias = hasData
+            ? getBiasFromScore(score, item.data?.trend || item.data?.bias)
+            : "—";
+          const color = hasData ? getBiasColor(bias) : theme.colors.textFaint;
+          const arrow = !hasData ? "—" : bias === "Bullish" ? "↑" : bias === "Bearish" ? "↓" : "→";
 
           return (
             <div key={item.name} style={styles.timeframeRow}>
               <span style={styles.timeframeName}>{item.name}</span>
-              <span style={{ color: getBiasColorFromText(trend), fontWeight: 800 }}>
-                {trend !== "—" ? "↑" : "—"}
+              <span style={{ color, fontWeight: 800 }}>{arrow}</span>
+              <span style={{ color, fontWeight: 700, fontSize: "11px" }}>{bias}</span>
+              <span style={styles.timeframeScore}>
+                {score != null ? `${formatSignedScore(score)} / 5` : "—"}
               </span>
-              <span style={{ color: getBiasColorFromText(trend), fontWeight: 700, fontSize: "11px" }}>
-                {trend}
-              </span>
-              <span style={styles.timeframeScore}>{score != null ? `${score} / 5` : "—"}</span>
             </div>
           );
         })}
@@ -741,10 +761,11 @@ function EmptyData() {
 
 function getBias(asset) {
   if (!asset) return "Neutral";
+  if (asset.score !== undefined && asset.score !== null && asset.score !== "") {
+    return getBiasFromScore(asset.score);
+  }
   if (asset.trend) return normalizeBias(asset.trend);
   if (asset.bias) return normalizeBias(asset.bias);
-  if (Number(asset.score) > 0) return "Bullish";
-  if (Number(asset.score) < 0) return "Bearish";
   return "Neutral";
 }
 
@@ -754,6 +775,28 @@ function normalizeBias(value) {
   if (text.includes("bullish")) return "Bullish";
   if (text.includes("bearish")) return "Bearish";
   return "Neutral";
+}
+
+// Score-based bias: 0 is always Neutral, positive is Bullish, negative is
+// Bearish. Falls back to a text trend/bias field only when no numeric score
+// is available at all.
+function getBiasFromScore(score, fallbackText) {
+  const num = Number(score);
+  if (score !== undefined && score !== null && score !== "" && Number.isFinite(num)) {
+    if (num === 0) return "Neutral";
+    return num > 0 ? "Bullish" : "Bearish";
+  }
+  return normalizeBias(fallbackText);
+}
+
+// Signed score display: 0 -> "0", positive -> "+N", negative -> "-N".
+function formatSignedScore(score) {
+  const num = Number(score);
+  if (score === undefined || score === null || score === "" || !Number.isFinite(num)) {
+    return "—";
+  }
+  if (num > 0) return `+${num}`;
+  return `${num}`;
 }
 
 function getBiasColor(bias) {
@@ -777,9 +820,9 @@ function getBiasColorFromText(value) {
 }
 
 function getSentimentColor(score) {
-  if (score >= 3) return theme.colors.mint;
-  if (score < 2) return theme.colors.red;
-  return theme.colors.amber;
+  const num = Number(score);
+  if (num === 0) return theme.colors.amber;
+  return num > 0 ? theme.colors.mint : theme.colors.red;
 }
 
 function getSymbol(asset) {
